@@ -1,0 +1,5 @@
+[package]
+
+name = "calculator"
+version = "0.0.1"
+authors = ["rollingcat <everydaycoding@gmail.com>"]
