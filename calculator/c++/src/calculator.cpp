@@ -51,7 +51,7 @@ string ConvertInfixToPostfix() {
 
         size_t idx = op.find_first_of(token, 0);
 
-        if (idx != -1 && token.length() == 1) {
+        if (idx != string::npos && token.length() == 1) {
             if (stack.empty()) {
                 stack.push_back(idx);
             } else {
@@ -283,6 +283,42 @@ string MultiplyBigInt(const string& a, const string& b) {
     return MultplyBigIntBruteForce(a, b);
 }
 
+enum Operator {
+    OP_Add,
+    OP_Sub,
+};
+
+string DoAddorSub(string& a, string& b, Operator op) {
+    // true is +, false is -
+    bool aSign = a[0] != '-';
+    bool bSign = b[0] != '-';
+    bool add = op == Operator::OP_Add;
+
+    if (!aSign) a.erase(a.begin());
+    if (!bSign) b.erase(b.begin());
+
+    if (aSign && bSign && add) {
+        return AddBigInt(a, b);
+    } else if (!aSign && add && !bSign) {
+        string result = AddBigInt(a, b);
+        result.insert(0, 1, '-');
+        return result;
+    } else if (aSign && !add && !bSign) {
+        return AddBigInt(a, b);
+    } else if (!aSign && !add && bSign) {
+        string result = AddBigInt(a, b);
+        result.insert(0, 1, '-');
+        return result;
+    } else if (aSign && add && !bSign) {
+        return SubtractBigInt(a, b);
+    } else if (!aSign && add && bSign) {
+        return SubtractBigInt(b, a);
+    } else if (aSign && !add && bSign) {
+        return SubtractBigInt(a, b);
+    }
+    return SubtractBigInt(b, a);
+}
+
 bool RPNWithBigIntegers(const string& input, string& result) {
     istringstream iss(input);
     vector<string> stack;
@@ -303,13 +339,13 @@ bool RPNWithBigIntegers(const string& input, string& result) {
             string newNum;
             if (token == "+") {
                 if (firstLen >= (MAX_DIGIT_NUM - 1) || secondLen >= (MAX_DIGIT_NUM - 1)) {
-                    newNum = AddBigInt(firstNum, secondNum);
+                    newNum = DoAddorSub(firstNum, secondNum, OP_Add);
                 } else {
                     newNum = Add(firstNum, secondNum);
                 }
             } else if (token == "-") {
                 if (firstLen >= (MAX_DIGIT_NUM - 1) || secondLen >= (MAX_DIGIT_NUM - 1)) {
-                    newNum = SubtractBigInt(firstNum, secondNum);
+                    newNum = DoAddorSub(firstNum, secondNum, OP_Sub);
                 } else {
                     newNum = Subtract(firstNum, secondNum);
                 }
@@ -407,6 +443,7 @@ int main() {
     };
 
     for (int i = 0; tests[i]; ++i) {
+        cout << "---------------------------------------------" << endl;
         printf("Testing string '%s'\n", tests[i]);
 
         Tokenize(string(tests[i]));
