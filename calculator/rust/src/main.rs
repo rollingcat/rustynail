@@ -2,17 +2,16 @@
 use std::char::UnicodeChar;
 
 fn main() {
-    println!("Calculator");
+	println!("[Calculator]");
 
-    let tests = vec!["3 + 4 * 2 - ( 1 - 5 ) + 7",
+    let tests = vec!["3+4*2-(1-5)+7",
     				 "123",
-    				 "3+4 * 2 *(5 - 3 )",
-    				 "(((((((1+2+3*(4 + 5))))))",
-    				 "a - (b + c+d * 4)!",
-    				 "3 + 4 * 2 ( 1 - 5 ) + 7",
-    				 "3 + 4 * 2 - * ( 1 - 5 ) + 7"];
+					 "3+4*2*(5-3)",
+					 "(((((((1+2+3*(4+5))))))",
+					 "a-(b+c+d*4)!",];
 
-    for test in tests.iter() {
+	for test in tests.iter() {
+		println!("--------------------------------------------");
     	println!("infix: {}", test);
 
   		let tokens = tokenize(test.as_slice());
@@ -71,7 +70,7 @@ fn rpn(input: Vec<&str>) -> Option<int> {
 	}
 	if stack.len() != 1 {
 		println!("Invalid postfix notation");
-		return None;		
+		return None;
 	}
 	Some(*stack.last().unwrap())
 }
@@ -83,7 +82,7 @@ fn convert_to_postfix(input: Vec<&str>) -> Vec<&str> {
 
 	for token in input.iter() {
 		let ch = token.char_at(0);
-		if token.len() == 1 && !UnicodeChar::is_numeric(ch) {			
+		if token.len() == 1 && !UnicodeChar::is_numeric(ch) {
 			let position = op.find(|&: c: char| {
 				if c == ch { true }
 				else { false }
@@ -148,38 +147,31 @@ fn convert_to_postfix(input: Vec<&str>) -> Vec<&str> {
 fn tokenize(input: &str) -> Vec<&str> {
 	let mut tokens = Vec::new();
 
-	let split: Vec<&str> = input.split(' ').collect();	
-
-	for word in split.iter() {
-		if word.is_empty() {
-			continue;
-		}
-		let &mut text = word;
-		let mut pos;
-		loop {
-			let position = text.find(|&: c: char| {
-				match c {
-					'+' => true,
-					'-' => true,
-					'*' => true,
-					'(' => true,
-					')' => true,
-					_ => false
-				}
-			});
-			if position != None {
-				pos = position.unwrap();
-				if pos == 0u { // operator
-					pos = 1u;
-				}
-				tokens.push(text.slice(0, pos));
-				text = text.slice_from(pos);
-			} else {
-				if !text.is_empty() {
-					tokens.push(text);
-				}
-				break;
+	let mut pos;
+	let mut text = input;
+	loop {
+		let position = text.find(|&: c: char| {
+			match c {
+				'+' => true,
+				'-' => true,
+				'*' => true,
+				'(' => true,
+				')' => true,
+				_ => false
 			}
+		});
+		if position != None {
+			pos = position.unwrap();
+			if pos == 0u { // operator
+				pos = 1u;
+			}
+			tokens.push(text.slice(0, pos));
+			text = text.slice_from(pos);
+		} else {
+			if !text.is_empty() {
+				tokens.push(text);
+			}
+			break;
 		}
 	}
 
