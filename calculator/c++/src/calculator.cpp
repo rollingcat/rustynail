@@ -217,10 +217,10 @@ string SubtractBigInt(const string& aa, const string& bb) {
 }
 
 string Multiply(const string& a, const string& b) {
-    unsigned int firstNum, secondNum;
+    int firstNum, secondNum;
     istringstream(a) >> firstNum;
     istringstream(b) >> secondNum;
-    unsigned int newNum = firstNum * secondNum;
+    int newNum = firstNum * secondNum;
 
     stringstream ss;
     ss << newNum;
@@ -436,7 +436,7 @@ int main() {
         "3+4 * 2 * ( 5 - 3 )",          /* OK */
         "(((((((1+2+3*(4 + 5))))))",    /* bad parens */
         "a - (b + c+d * 4)!",           /* unknown op */
-        "3 + 4 * 2 ( 1 - 5 ) + 7",      /* invalid */
+        "((3 - 10) * 2) + ( 1 - 5 ) + 7",
         "3 + 4 * 2 - * ( 1 - 5 ) + 7",  /* invalid */
         "(1*2)*3 + (10 - 5) *2",        /* OK */
         0
