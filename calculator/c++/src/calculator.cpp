@@ -58,7 +58,7 @@ string ConvertInfixToPostfix() {
                 while (!stack.empty()) {
                     int prec2 = stack.back() / 2;
                     int prec1 = idx / 2;
-                    if (prec2 > prec1) {
+                    if (prec2 >= prec1) {
                         postfix << op[stack.back()] << " ";
                         stack.pop_back();
                     } else {
