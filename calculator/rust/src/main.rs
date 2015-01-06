@@ -1,98 +1,45 @@
 
-use std::char::UnicodeChar;
+extern crate time;
+use std::char;
 use std::cmp::Ordering;
 
 static MAX_DIGIT_NUM: uint = 19u;
 
-fn main() {
-	println!("[Calculator]");
-
-	let tests = vec!["2*3",
-	// 				 "999+17",
-	// 				"12-7",
-	// 				"12*7",
-	// 				"7-12",
-	// 				"((3))",
-	// 				"(0-3)",
-					"(0-2)*2",
-					"(0-3)*27",
-	// 				"12+3+123",
-	// 				"10-5-25*2",
-					"999*12",
-					"123*(10-7)",
-	// 				"(2))",
-					];
-
-	for test in tests.iter() {
-		println!("--------------------------------------------");
-    	println!("infix: {}", test);
-
-  		let tokens = tokenize(test.as_slice());
-
-		print!("tokenize: ");
-  		for token in tokens.iter() {
-  			print!("{} ", token);
-  		}
-  		println!("");
-
-  		let postfix = convert_to_postfix(tokens);
-  		print!("postfix: ");
-  		if postfix.is_empty() {
-  			println!("failed");
-  		} else {
-	  		for token in postfix.iter() {
-	  			print!("{} ", token);
-	  		}
-	  		println!("");
-	  	}
-
-		let result = rpn_with_big_int(postfix);
-	  	match result {
-	  		Some(x) => println!("result: {}", x),
-	  		None => println!("None"),
-	  	}
-    }
+pub fn calc(expression: &str) ->String {
+	let tokens = tokenize(expression);
+	let postfix = convert_to_postfix(tokens);
+	if postfix.is_empty() {
+		return "Expression Error".to_string();
+	}
+	let result = rpn_with_big_int(postfix);
+	if result == None {
+		return "Expression Error".to_string();
+	}
+	result.unwrap()
 }
 
-fn rpn(input: Vec<&str>) -> Option<i64> {
-	let mut stack: Vec<i64> = Vec::new();
+fn main() {
+	println!("Programming Evalution #2");
 
-	for token in input.iter() {
-		let ch = token.char_at(0);
-		if token.len() == 1 && !UnicodeChar::is_numeric(ch) {
-			if stack.len() < 2 {
-				println!("Invalid postfix notation");
-				return None;
-			}
-			let second_num = stack.pop().unwrap();
-			let first_num = stack.pop().unwrap();
+	let start_time = time::precise_time_ns();
 
-			let mut new_num;
-			if ch == '+' {
-				new_num = first_num + second_num;
-			} else if ch == '-' {
-				new_num = first_num - second_num;
-			} else {
-				new_num = first_num * second_num;
-			}
-			stack.push(new_num);
-		} else {
-			let number = token.parse::<i64>();
-			stack.push(number.unwrap());
-		}
-	}
-	if stack.len() != 1 {
-		println!("Invalid postfix notation");
-		return None;
-	}
-	Some(*stack.last().unwrap())
+	println!("{}", calc("1+2+3"));
+
+	let end_time = time::precise_time_ns();
+
+	let delta = (end_time - start_time) as f32;
+
+	println!("Elapsed Time {} nsec", delta);
+	println!("Elapsed Time {} usec", delta / 1000.0f32);
+	println!("Elapsed Time {} msec", delta / 1000000.0f32);
+	println!("Elapsed Time {} sec", delta / 1000000000.0f32);
 }
 
 fn compare(a: &str, b: &str) -> Ordering {
 	if a.len() > b.len() {
-		return Ordering::Greater;
+		return Greater;
 	} else if a.len() < b.len() {
-		return Ordering::Less;
+		return Less;
 	}
 
 	let mut a_ch: u8;
@@ -101,17 +48,17 @@ fn compare(a: &str, b: &str) -> Ordering {
 		a_ch = a.char_at(i) as u8;
 		b_ch = b.char_at(i) as u8;
 		if a_ch > b_ch {
-			return Ordering::Greater;
+			return Greater;
 		} else if a_ch < b_ch {
-			return Ordering::Less;
+			return Less;
 		}
 	}
-	Ordering::Equal
+	Equal
 }
 
 fn add(a: &str, b: &str) -> String {
-	let a_num = a.parse::<i64>();
-	let b_num = b.parse::<i64>();
+	let a_num: Option<i64> = from_str(a);
+	let b_num: Option<i64> = from_str(b);
 	let new_num = a_num.unwrap() + b_num.unwrap();
 	new_num.to_string()
 }
@@ -153,8 +100,8 @@ fn add_big_int(a: &str, b: &str) -> String {
 }
 
 fn subtract(a: &str, b: &str) -> String {
-	let a_num = a.parse::<i64>();
-	let b_num = b.parse::<i64>();
+	let a_num: Option<i64> = from_str(a);
+	let b_num: Option<i64> = from_str(b);
 	let new_num = a_num.unwrap() - b_num.unwrap();
 	new_num.to_string()
 }
@@ -164,10 +111,10 @@ fn subtract_big_int(a_in: &str, b_in: &str) -> String {
 	let b: &str;
 
 	let comp = compare(a_in, b_in);
-	if comp == Ordering::Greater {
+	if comp == Greater {
 		a = a_in;
 		b = b_in;
-	} else if comp == Ordering::Less {
+	} else if comp == Less {
 		a = b_in;
 		b = a_in;
 	} else {
@@ -205,7 +152,7 @@ fn subtract_big_int(a_in: &str, b_in: &str) -> String {
 		ret.push(((sub + zero_ch) as u8) as char);
 	}
 
-	while ret.char_at(ret.len()-1) == '0' {
+	while ret.as_slice().char_at(ret.len()-1) == '0' {
 		ret.pop();
 	}
 
@@ -213,13 +160,13 @@ fn subtract_big_int(a_in: &str, b_in: &str) -> String {
 		ret.push('-');
 	}
 
-	ret = ret.chars().rev().collect();
+	ret = ret.as_slice().chars().rev().collect();
 	ret
 }
 
 fn multiply(a: &str, b: &str) -> String {
-	let a_num = a.parse::<i64>();
-	let b_num = b.parse::<i64>();
+	let a_num: Option<i64> = from_str(a);
+	let b_num: Option<i64> = from_str(b);
 	let new_num = a_num.unwrap() * b_num.unwrap();
 	new_num.to_string()
 }
@@ -227,15 +174,18 @@ fn multiply(a: &str, b: &str) -> String {
 fn normalize(input: &mut Vec<uint>) {
 	input.push(0u);
 
-	for i in range(0u, input.len()) {
-		if input[i] == 0u {
-			continue;
+	{
+		let buf = input.as_mut_slice();
+		for i in range(0u, buf.len()) {
+			if buf[i] == 0u {
+				continue;
+			}
+			buf[i+1] += buf[i] / 10u;
+			buf[i] %= 10;
 		}
-		input[i+1] += input[i] / 10u;
-		input[i] %= 10;
 	}
 
-	while *input.last().unwrap() == 0u {
+	while *input.as_slice().last().unwrap() == 0u {
 		input.pop();
 	}
 }
@@ -257,17 +207,14 @@ fn multiply_big_int_brute_force(a_in: &str, b_in: &str) -> String {
 	let b_len = b.len();
 
 	let size = a_len + b_len + 1;
-	let mut buf: Vec<uint> = Vec::with_capacity(size + 1);
-	for i in range(0, size) {
-		buf.push(0u);
-	}
+	let mut buf: Vec<uint> = Vec::from_elem(size, 0u);
 
 	let zero_ch: uint = '0' as uint;
 	for i in range(0u, a_len).rev() {
 		for j in range(0u, b_len).rev() {
 			let a_val = a.char_at(i) as uint - zero_ch;
 			let b_val = b.char_at(j) as uint - zero_ch;
-			buf[(a_len-i-1) + (b_len-j-1)] += a_val * b_val;
+			buf.as_mut_slice()[(a_len-i-1) + (b_len-j-1)] += a_val * b_val;
 		}
 	}
 	normalize(&mut buf);
@@ -327,9 +274,8 @@ fn rpn_with_big_int(input: Vec<&str>) -> Option<String> {
 
 	for token in input.iter() {
 		let ch = token.char_at(0);
-		if token.len() == 1 && !UnicodeChar::is_numeric(ch) {
+		if token.len() == 1 && !char::is_digit(ch) {
 			if stack.len() < 2 {
-				println!("Invalid postfix notation");
 				return None;
 			}
 			let b = stack.pop().unwrap();
@@ -358,7 +304,6 @@ fn rpn_with_big_int(input: Vec<&str>) -> Option<String> {
 					new_num = multiply(first_num, second_num);
 				}
 			} else {
-				println!("Unsupported operator");
 				return None;
 			}
 			stack.push(new_num);
@@ -367,7 +312,6 @@ fn rpn_with_big_int(input: Vec<&str>) -> Option<String> {
 		}
 	}
 	if stack.len() != 1 {
-		println!("Invalid postfix notation");
 		return None;
 	}
 	stack.pop()
@@ -380,8 +324,8 @@ fn convert_to_postfix(input: Vec<&str>) -> Vec<&str> {
 
 	for token in input.iter() {
 		let ch = token.char_at(0);
-		if token.len() == 1 && !UnicodeChar::is_numeric(ch) {
-			let position = op.find(|&: c: char| {
+		if token.len() == 1 && !char::is_digit(ch) {
+			let position = op.find(|c: char| {
 				if c == ch { true }
 				else { false }
 			});
@@ -406,7 +350,6 @@ fn convert_to_postfix(input: Vec<&str>) -> Vec<&str> {
 				stack.push(-2i);
 			} else if ch == ')' {
 				if stack.is_empty() {
-					println!("Mismatched parenthesis");
 					postfix.clear();
 					return postfix;
 				}
@@ -416,17 +359,15 @@ fn convert_to_postfix(input: Vec<&str>) -> Vec<&str> {
 				}
 				stack.pop();
 			} else {
-				println!("Invalid character");
 				postfix.clear();
 				return postfix;
 			}
 		} else {
-			let ret = token.find(|&: c: char| {
-				if !UnicodeChar::is_numeric(c) { true }
+			let ret = token.find(|c: char| {
+				if !char::is_digit(c) { true }
 				else { false }
 			});
 			if ret != None {
-				println!("Invalid character");
 				postfix.clear();
 				return postfix;
 			} else {
@@ -436,7 +377,6 @@ fn convert_to_postfix(input: Vec<&str>) -> Vec<&str> {
 	}
 	while !stack.is_empty() {
 		if *stack.last().unwrap() == -2i {
-			println!("Mismatched parenthesis");
 			postfix.clear();
 			return postfix;
 		}
@@ -453,7 +393,7 @@ fn tokenize(input: &str) -> Vec<&str> {
 	let mut pos;
 	let mut text = input;
 	loop {
-		let position = text.find(|&: c: char| {
+		let position = text.find(|c: char| {
 			match c {
 				'+' => true,
 				'-' => true,
