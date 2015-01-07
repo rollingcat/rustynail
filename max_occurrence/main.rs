@@ -10,6 +10,13 @@ use std::io::{File,BufferedReader, IoResult};
 static COUNT_THREAD_NUM: uint = 4u;
 
 pub fn find_max_occurance(list : Vec<int>, count : uint) -> int {
+
+    let mut start_time;
+    let mut end_time;
+    let mut delta;
+
+    start_time = time::precise_time_ns();
+
     let list_arc = Arc::new(list);
 
     let input_num = count / COUNT_THREAD_NUM;
@@ -40,6 +47,12 @@ pub fn find_max_occurance(list : Vec<int>, count : uint) -> int {
         hash_maps.push(rx.recv());
     }
 
+    end_time = time::precise_time_ns();
+    delta = (end_time - start_time) as f32;
+    println!("Make maps: {} sec", delta / 1000000000.0f32);
+
+    start_time = time::precise_time_ns();
+
     for i in range(0u, hash_maps.len()) {
         let map = hash_maps.get(i);
 
@@ -54,7 +67,11 @@ pub fn find_max_occurance(list : Vec<int>, count : uint) -> int {
         }
     }
 
-    let start_time = time::precise_time_ns();
+    end_time = time::precise_time_ns();
+    delta = (end_time - start_time) as f32;
+    println!("Unify maps: {} sec", delta / 1000000000.0f32);
+
+    start_time = time::precise_time_ns();
 
     let mut number = std::int::MAX;
     let mut max_occurrence = 1u;
@@ -71,8 +88,8 @@ pub fn find_max_occurance(list : Vec<int>, count : uint) -> int {
         }
     }
 
-    let end_time = time::precise_time_ns();
-    let delta = (end_time - start_time) as f32;
+    end_time = time::precise_time_ns();
+    delta = (end_time - start_time) as f32;
     println!("Scan Final Map: {} sec", delta / 1000000000.0f32);
 
     number
