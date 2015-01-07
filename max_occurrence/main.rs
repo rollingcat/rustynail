@@ -7,17 +7,18 @@ use std::sync::Arc;
 
 use std::io::{File,BufferedReader, IoResult};
 
-static THREAD_NUM: uint = 4u;
+static COUNT_THREAD_NUM: uint = 4u;
 
 pub fn find_max_occurance(list : Vec<int>, count : uint) -> int {
     let list_arc = Arc::new(list);
 
-    let input_num = count / THREAD_NUM;
+    let input_num = count / COUNT_THREAD_NUM;
     let mut begin_idx = 0u;
 
-    let threads = Vec::from_fn(THREAD_NUM, |_| {
+    let threads = Vec::from_fn(COUNT_THREAD_NUM, |_| {
             let (tx, rx) = channel();
             let thread_list = list_arc.clone();
+
             spawn(proc() {
                 // tx.send(use_hash_map(thread_list.as_slice(), count));
                 tx.send(use_hash_map(thread_list.slice(begin_idx, begin_idx + input_num), input_num));
@@ -26,33 +27,38 @@ pub fn find_max_occurance(list : Vec<int>, count : uint) -> int {
             rx
         });
 
-    let mut cnt = 0u;
-    let mut result;
+    let mut hash_maps: Vec<HashMap<int, uint>> = Vec::new();
+
+    let mut init = false;
+    let mut unified_counter: HashMap<int, uint> = HashMap::new();
     for rx in threads.iter() {
-        cnt += 1u;
-        result = rx.recv();
-        println!("find_max_occurance: thread#{} - {}", cnt, result);
+        if !init {
+            unified_counter = rx.recv();
+            init = true;
+            continue;
+        }
+        hash_maps.push(rx.recv());
     }
-    // result
-    9999
-}
 
-fn use_hash_map(list : &[int], count : uint) -> int {
-    let mut counter: HashMap<int, uint> = HashMap::with_capacity(count / 2u);
+    for i in range(0u, hash_maps.len()) {
+        let map = hash_maps.get(i);
 
-    for num in list.iter() {
-        match counter.entry(*num) {
-            Vacant(entry) => entry.set(1u),
-            Occupied(mut entry) => {
-                *entry.get_mut() += 1;
-                entry.into_mut()
-            }
-        };
+        for (key, value) in map.iter() {
+            match unified_counter.entry(*key) {
+                Vacant(entry) => entry.set(*value),
+                Occupied(mut entry) => {
+                    *entry.get_mut() += *value;
+                    entry.into_mut()
+                }
+            };
+        }
     }
+
+    let start_time = time::precise_time_ns();
 
     let mut number = std::int::MAX;
     let mut max_occurrence = 1u;
-    for (num, occurrence) in counter.iter() {
+    for (num, occurrence) in unified_counter.iter() {
         if *occurrence < max_occurrence {
             continue;
         } else if *occurrence > max_occurrence {
@@ -65,8 +71,26 @@ fn use_hash_map(list : &[int], count : uint) -> int {
         }
     }
 
-    println!("{} / num: {} / occurrence: {}", count, number, max_occurrence);
+    let end_time = time::precise_time_ns();
+    let delta = (end_time - start_time) as f32;
+    println!("Scan Final Map: {} sec", delta / 1000000000.0f32);
+
     number
+}
+
+fn use_hash_map(list : &[int], count : uint) -> HashMap<int, uint> {
+    let mut counter: HashMap<int, uint> = HashMap::with_capacity(count / 2u);
+
+    for num in list.iter() {
+        match counter.entry(*num) {
+            Vacant(entry) => entry.set(1u),
+            Occupied(mut entry) => {
+                *entry.get_mut() += 1;
+                entry.into_mut()
+            }
+        };
+    }
+    counter
 }
 
 
