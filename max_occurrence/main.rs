@@ -112,68 +112,107 @@ fn make_hash_map(list : &[int], count : uint) -> HashMap<int, uint> {
     counter
 }
 
+static GRAIN_SIZE: uint = 10000000u / 2;
+
 fn main() {
-    // let mut list : Vec<int> = vec![];
-    // let path = Path::new("GenRandomData");
-    // let mut result : IoResult<String>;
-    // let mut line : String;
-    // let mut i = 0u;
+    // CODE ---------------- 1
+    // let i_vec = vec![1i, 2, 3, 4 ,5, 6];
+    // let i_vec_p = i_vec.slice(1, 4); // partially copy
+    // let (a, b):(int, int) = unsafe { std::mem::transmute(i_vec_p) };
+    // let (tx, rx) = channel();
+    // spawn(proc() {
+    //     let borrowed: &mut [int] = unsafe { std::mem::transmute((a, b)) };
+    //     println!("borrowed = {}", borrowed);
+    //     borrowed[0] = 10;
+    //     tx.send(());
+    // });
+    // rx.recv();
+    // println!("i_vec = {}", i_vec);
+    // println!("i_vec_p = {}", i_vec_p);
+    // ------------------------
 
-    // let file = File::open(&path);
-    // let mut reader = BufferedReader::new(file);
-    // result = reader.read_line();
+    // CODE ---------------- 2
+    // let v = range(0i, 10).collect: Vec<_>>();
+    // let v_arc = Arc::new(RWLock::new(v));
 
-    // println!("Loding Data");
-    // loop {
-    //     line = match result {
-    //         Ok(s) => s,
-    //             Err(_) => break,
-    //     };
-
-    //     match from_str(line.as_slice().trim()) {
-    //         Some(x) => {
-    //             list.push(x);
-    //             i+=1;
-    //     }
-    //         None => ()
-    //     }
-
-    //     if i % 100 == 0 {
-    //         print!(".");
-    //     }
-
-    //     result = reader.read_line();
+    // for idx in range(0i, 3) {
+    //     let v_arc_clone = v_arc.clone();
+    //     spawn(move || {
+    //         {
+    //             let mut w = v_arc_clone.deref().write();
+    //             (*w)[idx as uint] = (*w)[idx as uint] + 1;
+    //         }
+    //         {
+    //             let r = v_arc_clone.deref().read();
+    //             println!("task share and modify the value : {}", *r);
+    //         }
+    //     });
     // }
+    // ------------------------
+
+    // http://doc.rust-lang.org/std/sync/atomic/struct.AtomicInt.html
 
     let mut list : Vec<int> = vec![];
-    let mut list2 : Vec<int> = vec![];
-    let mut i = 5000000u;
+    let path = Path::new("GenRandomData");
+    let mut result : IoResult<String>;
+    let mut line : String;
+    let mut i = 0u;
 
-    list = range(0i, i as int).rev().collect();
+    let file = File::open(&path);
+    let mut reader = BufferedReader::new(file);
+    result = reader.read_line();
 
-    for _ in range(0u, i) {
-        list.push((rand::random::<uint>() % i) as int);
+    println!("Loding Data");
+    loop {
+        line = match result {
+            Ok(s) => s,
+                Err(_) => break,
+        };
+
+        match from_str(line.as_slice().trim()) {
+            Some(x) => {
+                list.push(x);
+                i+=1;
+            }
+            None => ()
+        }
+
+        // if i % 100 == 0 {
+        //     print!(".");
+        // }
+
+        result = reader.read_line();
     }
+
+    // let mut list : Vec<int> = vec![];
+    let mut list2 : Vec<int> = vec![];
+    // let mut i = 5000000u;
+
+    // list = range(0i, i as int).rev().collect();
+
+    // for _ in range(0u, i) {
+    //     list.push((rand::random::<uint>() % i) as int);
+    // }
 
     list2 = list.clone();
 
-    i += i;
+    // i += i;
 
-    println!("");
-    println!("=========");
-    println!("Total Items {}", i);
+    // println!("");
+    // println!("=========");
+    // println!("Total Items {}", i);
 
     let mut start_time = time::precise_time_ns();
 
-    println!("Maximum Occurance Value is {}", use_rust_sort(list.as_mut_slice(), i));
+    // println!("Maximum Occurance Value is {}", use_rust_sort(list.as_mut_slice(), i));
 
     let mut end_time = time::precise_time_ns();
     let mut delta = (end_time - start_time) as f32;
 
-    println!("Elapsed Time {} nsec", delta);
-    println!("Elapsed Time {} usec", delta / 1000.0f32);
-    println!("Elapsed Time {} msec", delta / 1000000.0f32);
-    println!("Elapsed Time {} sec", delta / 1000000000.0f32);
+    // println!("Elapsed Time {} nsec", delta);
+    // println!("Elapsed Time {} usec", delta / 1000.0f32);
+    // println!("Elapsed Time {} msec", delta / 1000000.0f32);
+    // println!("Elapsed Time {} sec", delta / 1000000000.0f32);
 
     println!("");
     println!("=========");
@@ -231,45 +270,38 @@ fn use_rust_sort(list : &mut [int], count : uint) -> int {
     max_num
 }
 
-// template<class T>
-// void parallel_sort(T* data, int len, int grainsize)
-// {
-//     if(len < grainsize) // Use grainsize instead of thread count so that we don't e.g. spawn 4 threads just to sort 8 elements.
-//     {
-//         std::sort(data, data + len, std::less<T>());
-//     }
-//     else
-//     {
-//         auto future = std::async(parallel_sort<T>, data, len/2, grainsize);
-
-//         parallel_sort(data + len/2, len/2, grainsize); // No need to spawn another thread just to block the calling thread which would do nothing.
-
-//         future.wait();
-
-//         std::inplace_merge(data, data + len/2, data + len, std::less<T>());
-//     }
-// }
-
-static GRAIN_SIZE: uint = 10000u;
-
-fn parallel_sort(data : &mut [int], size : uint) {
+fn parallel_sort(list : &mut [int], size : uint, id: uint) {
+    println!("parallel #{} BEGIN", id);
     if size < GRAIN_SIZE {
-        data.sort();
+        println!("parallel #{} ---> quick sort", id);
+        list.sort();
     } else {
-        let mut future = Future::spawn(proc() {parallel_sort(data.slice(0, size / 2), size / 2)});
+        // let thread_list = list.slice(0, size / 2);
+        let (a, b):(int, int) = unsafe { std::mem::transmute(list.slice(0, size / 2)) };
 
-        parallel_sort(data.slice(size / 2, size), size - (size / 2));
+        let mut future = Future::spawn(proc() {
+            let borrowed: &mut [int] = unsafe { std::mem::transmute((a, b)) };
+            parallel_sort(borrowed, size / 2, id + 10)
+        });
+
+        parallel_sort(list.slice_mut(size / 2, size), size - (size / 2), id + 1);
 
         future.get();
 
-        merge(data, 0, size / 2, size - 1);
+        merge(list, 0, size / 2, size - 1);
     }
+    println!("parallel #{} END", id);
 }
 
-fn swap(a: &mut int, b: &mut int) {
-    let tmp = *a;
-    *a = *b;
-    *b = tmp;
+fn rust_sort(data: &mut [int]) -> bool {
+    data.sort();
+    true
+}
+
+fn swap(data: &mut [int], i: uint, j: uint) {
+    let tmp = data[i];
+    data[i] = data[j];
+    data[j] = tmp;
 }
 
 fn merge(data: &mut [int], l: uint, m: uint, r: uint) {
@@ -286,23 +318,23 @@ fn merge(data: &mut [int], l: uint, m: uint, r: uint) {
         }
 
         if data[l+i] <= data[m+1+j] {
-            swap(&mut data[l+i], &mut data[k]);
-            i += 1u;     
+            swap(data, l+i, k);
+            i += 1u;
         } else {
-            swap(&mut data[m+1+j], &mut data[k]);
+            swap(data, m+1+j, k);
             j += 1u;
         }
         k += 1u;
     }
 }
 
-fn use_parallel_sort(list: &'static mut [int], count : uint) -> int {
+fn use_parallel_sort(list: &mut [int], count : uint) -> int {
     let mut start_time;
     let mut end_time;
     let mut delta;
 
     start_time = time::precise_time_ns();
-    parallel_sort(list, count);
+    parallel_sort(list, count, 0);
     end_time = time::precise_time_ns();
 
     delta = (end_time - start_time) as f32;
